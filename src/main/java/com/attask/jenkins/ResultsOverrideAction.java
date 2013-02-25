@@ -30,9 +30,9 @@ public class ResultsOverrideAction implements Action, Saveable {
 		this.build = build;
 	}
 
-	public boolean getIsUserAuthenticated() {
-		User user = User.current();
-		return user != null && User.current().hasPermission(Permission.CONFIGURE);
+	public boolean checkIsUserAuthenticated() {
+		boolean result = build.hasPermission(AbstractBuild.UPDATE);
+		return result;
 	}
 	
 	public User getLastEditBy() {
@@ -44,30 +44,70 @@ public class ResultsOverrideAction implements Action, Saveable {
 	}
 
 	public void doChangeStatus(StaplerRequest request, StaplerResponse response) throws ServletException, IOException {
-		boolean isAuthenticated = getIsUserAuthenticated();
+		boolean isAuthenticated = checkIsUserAuthenticated();
 		boolean isBuilding = build.isBuilding();
 		if(isAuthenticated && !isBuilding) {
 			String status = request.getParameter("status");
 			Result result = Result.fromString(status);
-			if(build instanceof MatrixBuild) {
-				for (MatrixRun matrixRun : ((MatrixBuild) build).getRuns()) {
-					if(matrixRun.getNumber() == build.getNumber() && result.isBetterThan(matrixRun.getResult())) {
-						forceChangeStatus(build, result);
-						matrixRun.save();
-					}
-				}
-			} else {
-				forceChangeStatus(build, result);
-			}
-			this.save();
-
-			lastEditBy = User.current();
-			lastEditOn = new Date();
-			LOGGER.info(lastEditBy.getFullName() + " (" + lastEditBy.getId() + ") edited the status on " + lastEditOn.toString() + " from " + build.getResult() + " to " + result);
+			updateStatus(result);
 		} else {
 			LOGGER.info("Skipping change status event: authenticated? " + isAuthenticated + " building? " + isBuilding);
 		}
 		response.forwardToPreviousPage(request);
+	}
+
+	/**
+	 * Updates the this.build instance's result to the given result.
+	 * If this.build is a MatrixBuild or MatrixRun, it also updates the parent/children to have the correct status as well.
+	 * Also updates the lastEditBy and lastEditOn fields.
+	 */
+	private void updateStatus(Result result) throws IOException {
+		if(build instanceof MatrixBuild) {
+			updateMatrixChildren(result, (MatrixBuild) build);
+		}
+
+		forceChangeStatus(build, result);
+
+		if(build instanceof MatrixRun) {
+			updateMatrixParentToWorst(result, ((MatrixRun) build).getParentBuild());
+		}
+
+		lastEditBy = User.current();
+		if(lastEditBy == null) {
+			lastEditBy = User.getUnknown();
+		}
+		lastEditOn = new Date();
+		LOGGER.info(lastEditBy.getFullName() + " (" + lastEditBy.getId() + ") edited the status on " + lastEditOn.toString() + " from " + build.getResult() + " to " + result);
+
+		this.save();
+	}
+
+	/**
+	 * Updates all the child MatrixRuns of the given matrix build to the given result *if* it's better that their individual results.
+	 */
+	private void updateMatrixChildren(Result result, MatrixBuild matrixbuild) throws IOException {
+		for (MatrixRun matrixRun : matrixbuild.getRuns()) {
+			if(matrixRun.getNumber() == build.getNumber() && result.isBetterThan(matrixRun.getResult())) {
+				forceChangeStatus(matrixRun, result);
+				matrixRun.save();
+			}
+		}
+	}
+
+	/**
+	 * Updates the given matrix build's result to be the worst of all it's children.
+	 */
+	private void updateMatrixParentToWorst(Result result, MatrixBuild parentBuild) {
+		if(!parentBuild.isBuilding()) {
+			Result worst = result;
+			for (MatrixRun matrixRun : parentBuild.getRuns()) {
+				if(matrixRun.getNumber() == build.getNumber() &&
+						matrixRun.getResult().isWorseThan(worst)) {
+					worst = matrixRun.getResult();
+				}
+			}
+			forceChangeStatus(parentBuild, result);
+		}
 	}
 
 	public AbstractBuild getBuild() {

@@ -1,5 +1,5 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt" xmlns:local="local">
-	<j:if test="${'anonymous' != it.getIsUserAuthenticated()}">
+	<j:if test="${it.checkIsUserAuthenticated()}">
 		<div id="ResultsOverrideAction">
 			<style>
 				#ResultsOverrideAction a {

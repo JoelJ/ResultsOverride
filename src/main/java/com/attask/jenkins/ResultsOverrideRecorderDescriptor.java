@@ -10,15 +10,17 @@ import hudson.tasks.Publisher;
  * Date: 2/17/12
  * Time: 10:39 AM
  */
+@Deprecated
 @Extension
 public class ResultsOverrideRecorderDescriptor extends BuildStepDescriptor<Publisher> {
+	@SuppressWarnings("deprecation")
 	public ResultsOverrideRecorderDescriptor() {
 		super(ResultsOverrideRecorder.class);
 	}
 
 	@Override
 	public boolean isApplicable(Class<? extends AbstractProject> jobType) {
-		return true;
+		return false;
 	}
 
 	@Override

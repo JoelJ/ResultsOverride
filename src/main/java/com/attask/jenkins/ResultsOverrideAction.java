@@ -1,5 +1,7 @@
 package com.attask.jenkins;
 
+import hudson.matrix.MatrixBuild;
+import hudson.matrix.MatrixRun;
 import hudson.model.*;
 import hudson.security.Permission;
 import org.kohsuke.stapler.StaplerRequest;
@@ -47,7 +49,16 @@ public class ResultsOverrideAction implements Action, Saveable {
 		if(isAuthenticated && !isBuilding) {
 			String status = request.getParameter("status");
 			Result result = Result.fromString(status);
-			forceChangeStatus(result);
+			if(build instanceof MatrixBuild) {
+				for (MatrixRun matrixRun : ((MatrixBuild) build).getRuns()) {
+					if(matrixRun.getNumber() == build.getNumber() && result.isBetterThan(matrixRun.getResult())) {
+						forceChangeStatus(build, result);
+						matrixRun.save();
+					}
+				}
+			} else {
+				forceChangeStatus(build, result);
+			}
 			this.save();
 
 			lastEditBy = User.current();
@@ -85,7 +96,7 @@ public class ResultsOverrideAction implements Action, Saveable {
 	 * if the new result is worse. So we must manually set the field via reflection.
 	 * @param status The Result to change the result of this.build.
 	 */
-	private void forceChangeStatus(Result status) {
+	private static void forceChangeStatus(AbstractBuild build, Result status) {
 		try {
 			Field resultField = Run.class.getDeclaredField("result");
 			resultField.setAccessible(true);

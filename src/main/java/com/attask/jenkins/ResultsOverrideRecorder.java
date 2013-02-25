@@ -24,7 +24,7 @@ public class ResultsOverrideRecorder extends Recorder implements MatrixAggregata
 
 	@Override
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-		build.getActions().add(new ResultsOverrideAction(build));
+		build.addAction(new ResultsOverrideAction(build));
 		return true;
 	}
 

@@ -4,12 +4,6 @@ import hudson.Extension;
 import hudson.model.*;
 import hudson.model.listeners.RunListener;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-
 /**
  * User: Joel Johnson
  * Date: 2/25/13

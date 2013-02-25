@@ -6,7 +6,6 @@ import hudson.tasks.*;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
-import java.util.Collection;
 
 /**
  * User: joeljohnson
